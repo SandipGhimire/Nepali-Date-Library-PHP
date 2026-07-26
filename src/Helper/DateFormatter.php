@@ -151,7 +151,9 @@ final class DateFormatter
      */
     private static function pass(string $seq): callable
     {
-        return static fn (NepaliDate $date): string => $seq;
+        return static function (NepaliDate $date) use ($seq): string {
+            return $seq;
+        };
     }
 
     private static function isSpecial(string $ch): bool
@@ -165,14 +167,22 @@ final class DateFormatter
      */
     private static function formatterFor(string $ch, int $size): callable
     {
-        return match ($ch) {
-            'Y' => self::yearEn($size),
-            'y' => self::yearNp($size),
-            'M' => self::monthEn($size),
-            'm' => self::monthNp($size),
-            'D' => self::dateEn($size),
-            'd' => self::dateNp($size),
-        };
+        switch ($ch) {
+            case 'Y':
+                return self::yearEn($size);
+            case 'y':
+                return self::yearNp($size);
+            case 'M':
+                return self::monthEn($size);
+            case 'm':
+                return self::monthNp($size);
+            case 'D':
+                return self::dateEn($size);
+            case 'd':
+                return self::dateNp($size);
+        }
+
+        throw new \UnexpectedValueException("Unhandled format character '{$ch}'");
     }
 
     /**
@@ -189,7 +199,7 @@ final class DateFormatter
 
         $tokens = [];
 
-        $chars = mb_str_split($formatStr, 1, 'UTF-8');
+        $chars = preg_split('//u', $formatStr, -1, PREG_SPLIT_NO_EMPTY);
 
         foreach ($chars as $ch) {
             if ($ch === $special) {

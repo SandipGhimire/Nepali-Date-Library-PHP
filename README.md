@@ -27,7 +27,7 @@ For detailed guides, API references, and examples, please visit the official Wik
 composer require sghimire/nepali-date-library
 ```
 
-Requires PHP 8.1 or newer.
+Requires PHP 7.1 through 8.5.
 
 ## Quick Start
 

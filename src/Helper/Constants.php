@@ -20,7 +20,7 @@ final class Constants
      *
      * @var array<int, array{year:int, days:int[], totalDays:int, daysTillNow:int}>
      */
-    public static array $NEPALI_DATE_MAP = [
+    public static $NEPALI_DATE_MAP = [
         ['year' => 1976, 'days' => [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31], 'totalDays' => 0, 'daysTillNow' => 0],
         ['year' => 1977, 'days' => [30, 32, 31, 32, 31, 31, 29, 30, 29, 30, 29, 31], 'totalDays' => 0, 'daysTillNow' => 0],
         ['year' => 1978, 'days' => [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30], 'totalDays' => 0, 'daysTillNow' => 0],
@@ -148,23 +148,27 @@ final class Constants
         ['year' => 2100, 'days' => [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31], 'totalDays' => 0, 'daysTillNow' => 0],
     ];
 
-    /** Unix epoch milliseconds for 1919-04-13T00:00:00Z, the first supported date (BS 1976/01/01). */
-    public static int $EPOCH = 0;
+    /**
+     * Unix epoch milliseconds for 1919-04-13T00:00:00Z, the first supported date (BS 1976/01/01).
+     *
+     * @var int
+     */
+    public static $EPOCH = 0;
 
     /** @var string[] */
-    public static array $WEEK_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    public static $WEEK_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
     /** @var string[] */
-    public static array $WEEK_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    public static $WEEK_SHORT_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
     /** @var string[] */
-    public static array $WEEK_NP = ["आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"];
+    public static $WEEK_NP = ["आइतबार", "सोमबार", "मंगलबार", "बुधबार", "बिहिबार", "शुक्रबार", "शनिबार"];
 
     /** @var string[] */
-    public static array $WEEK_SHORT_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
+    public static $WEEK_SHORT_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
     /** @var string[] */
-    public static array $MONTH_EN = [
+    public static $MONTH_EN = [
         "Baisakh",
         "Jestha",
         "Asar",
@@ -180,10 +184,10 @@ final class Constants
     ];
 
     /** @var string[] */
-    public static array $MONTH_SHORT_EN = ["Bai", "Jes", "Asa", "Shr", "Bhd", "Asw", "Kar", "Man", "Pou", "Mag", "Fal", "Cha"];
+    public static $MONTH_SHORT_EN = ["Bai", "Jes", "Asa", "Shr", "Bhd", "Asw", "Kar", "Man", "Pou", "Mag", "Fal", "Cha"];
 
     /** @var string[] */
-    public static array $MONTH_NP = [
+    public static $MONTH_NP = [
         "बैशाख",
         "जेठ",
         "असार",
@@ -199,12 +203,13 @@ final class Constants
     ];
 
     /** @var string[] */
-    public static array $MONTH_SHORT_NP = ["बै", "जे", "अ", "श्रा", "भा", "आ", "का", "मं", "पौ", "मा", "फा", "चै"];
+    public static $MONTH_SHORT_NP = ["बै", "जे", "अ", "श्रा", "भा", "आ", "का", "मं", "पौ", "मा", "फा", "चै"];
 
     /** @var string[] */
-    public static array $NUMBER_NP = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    public static $NUMBER_NP = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
 
-    private static bool $initialized = false;
+    /** @var bool */
+    private static $initialized = false;
 
     /**
      * Computes totalDays / daysTillNow for each calendar entry and the EPOCH constant.

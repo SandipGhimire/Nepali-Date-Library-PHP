@@ -25,10 +25,17 @@ use NepaliDateLibrary\Helper\DateFormatter;
  */
 final class NepaliDate
 {
-    private int $timestampMs;
-    private int $year;
-    private int $month;
-    private int $day;
+    /** @var int */
+    private $timestampMs;
+
+    /** @var int */
+    private $year;
+
+    /** @var int */
+    private $month;
+
+    /** @var int */
+    private $day;
 
     /**
      * Creates a NepaliDate instance.
@@ -40,7 +47,7 @@ final class NepaliDate
      *        when $yearOrDate is a Nepali year.
      * @param int|null $day Nepali day (1-32).
      */
-    public function __construct(mixed $yearOrDate = null, ?int $month = null, ?int $day = null)
+    public function __construct($yearOrDate = null, ?int $month = null, ?int $day = null)
     {
         if ($yearOrDate === null) {
             $this->setEnglishDate(self::nowMs());

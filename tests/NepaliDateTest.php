@@ -9,7 +9,6 @@ use DateTimeZone;
 use InvalidArgumentException;
 use NepaliDateLibrary\Helper\Constants;
 use NepaliDateLibrary\NepaliDate;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class NepaliDateTest extends TestCase
@@ -45,7 +44,9 @@ final class NepaliDateTest extends TestCase
         self::assertSame($original->getTime(), $copy->getTime());
     }
 
-    #[DataProvider('stringFormatsProvider')]
+    /**
+     * @dataProvider stringFormatsProvider
+     */
     public function testConstructFromString(string $input): void
     {
         $d = new NepaliDate($input);
