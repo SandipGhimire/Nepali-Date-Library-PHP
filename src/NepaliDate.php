@@ -18,10 +18,9 @@ use NepaliDateLibrary\Helper\DateFormatter;
  *
  * Internally the instant backing this date is stored as Unix epoch
  * milliseconds and all derived getters (weekday, hour, minute, second,
- * millisecond) are computed from the UTC calendar fields of that instant.
- * The original JS getters use the host's local timezone for those fields,
- * which is non-deterministic across environments; UTC is used here instead
- * so results only ever depend on the date being represented.
+ * millisecond) are computed in Nepal Standard Time (UTC+05:45), applied as
+ * an explicit fixed offset so results only ever depend on the instant being
+ * represented, never on the host machine's own timezone configuration.
  */
 final class NepaliDate
 {
@@ -280,10 +279,10 @@ final class NepaliDate
         return $this->month;
     }
 
-    /** Day of week (0-6, 0 = Sunday), computed in UTC. */
+    /** Day of week (0-6, 0 = Sunday), computed in Nepal local time. */
     public function getDay(): int
     {
-        return (int) gmdate('w', self::floorDiv($this->timestampMs, 1000));
+        return (int) gmdate('w', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
     }
 
     /** Nepali day of month. */
@@ -292,22 +291,22 @@ final class NepaliDate
         return $this->day;
     }
 
-    /** Hour of day (0-23), computed in UTC. */
+    /** Hour of day (0-23), computed in Nepal local time. */
     public function getHours(): int
     {
-        return (int) gmdate('G', self::floorDiv($this->timestampMs, 1000));
+        return (int) gmdate('G', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
     }
 
-    /** Minutes (0-59), computed in UTC. */
+    /** Minutes (0-59), computed in Nepal local time. */
     public function getMinutes(): int
     {
-        return (int) gmdate('i', self::floorDiv($this->timestampMs, 1000));
+        return (int) gmdate('i', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
     }
 
-    /** Seconds (0-59), computed in UTC. */
+    /** Seconds (0-59), computed in Nepal local time. */
     public function getSeconds(): int
     {
-        return (int) gmdate('s', self::floorDiv($this->timestampMs, 1000));
+        return (int) gmdate('s', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
     }
 
     /** Milliseconds (0-999). */
@@ -475,8 +474,9 @@ final class NepaliDate
     public function startOfDay(): self
     {
         $result = $this->clone();
-        $dayStartMs = self::floorDiv($this->timestampMs, 86400000) * 86400000;
-        $result->timestampMs = $dayStartMs;
+        $nepalMs = $this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
+        $nepalDayStartMs = self::floorDiv($nepalMs, 86400000) * 86400000;
+        $result->timestampMs = $nepalDayStartMs - Constants::$NEPAL_UTC_OFFSET_MS;
         return $result;
     }
 
@@ -486,8 +486,9 @@ final class NepaliDate
     public function endOfDay(): self
     {
         $result = $this->clone();
-        $dayStartMs = self::floorDiv($this->timestampMs, 86400000) * 86400000;
-        $result->timestampMs = $dayStartMs + 86400000 - 1;
+        $nepalMs = $this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
+        $nepalDayStartMs = self::floorDiv($nepalMs, 86400000) * 86400000;
+        $result->timestampMs = $nepalDayStartMs + 86400000 - 1 - Constants::$NEPAL_UTC_OFFSET_MS;
         return $result;
     }
 

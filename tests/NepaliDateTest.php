@@ -277,12 +277,25 @@ final class NepaliDateTest extends TestCase
     // Start/end of day/week/month/year
     // -------------------------------------------------------------------
 
+    public function testTimeGettersReturnNepalLocalTime(): void
+    {
+        $ad = DateTimeImmutable::createFromFormat('!Y-m-d H:i:s.u', '2023-04-28 13:45:30.250000', new DateTimeZone('UTC'));
+        $d = new NepaliDate($ad);
+
+        self::assertSame(19, $d->getHours());
+        self::assertSame(30, $d->getMinutes());
+        self::assertSame(30, $d->getSeconds());
+        self::assertSame(250, $d->getMilliseconds());
+    }
+
     public function testStartAndEndOfDay(): void
     {
         $d = new NepaliDate(2080, 0, 15);
 
-        self::assertSame('2023-04-28T00:00:00+00:00', $d->startOfDay()->getEnglishDate()->format('c'));
-        self::assertSame('2023-04-28T23:59:59+00:00', $d->endOfDay()->getEnglishDate()->format('c'));
+        self::assertSame('2023-04-27T18:15:00+00:00', $d->startOfDay()->getEnglishDate()->format('c'));
+        self::assertSame(0, $d->startOfDay()->getHours());
+        self::assertSame('2023-04-28T18:14:59+00:00', $d->endOfDay()->getEnglishDate()->format('c'));
+        self::assertSame(23, $d->endOfDay()->getHours());
         self::assertSame(999, $d->endOfDay()->getMilliseconds());
     }
 
