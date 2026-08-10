@@ -155,6 +155,8 @@ final class Constants
      */
     public static $EPOCH = 0;
 
+    public static $NEPAL_UTC_OFFSET_MS = 20700000;
+
     /** @var string[] */
     public static $WEEK_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 

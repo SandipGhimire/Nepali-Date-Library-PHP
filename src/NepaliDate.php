@@ -162,7 +162,8 @@ final class NepaliDate
         $map = Constants::$NEPALI_DATE_MAP;
         $mapCount = count($map);
 
-        $daysCount = self::floorDiv($timestampMs - Constants::$EPOCH, 86400000);
+        $nepalWallClockMs = $timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
+        $daysCount = self::floorDiv($nepalWallClockMs - Constants::$EPOCH, 86400000);
         $idx = self::floorDiv($daysCount, 366);
 
         if ($idx < 0) {
@@ -473,8 +474,10 @@ final class NepaliDate
      */
     public function startOfDay(): self
     {
+        $result = $this->clone();
         $dayStartMs = self::floorDiv($this->timestampMs, 86400000) * 86400000;
-        return new self($dayStartMs);
+        $result->timestampMs = $dayStartMs;
+        return $result;
     }
 
     /**
@@ -482,8 +485,10 @@ final class NepaliDate
      */
     public function endOfDay(): self
     {
+        $result = $this->clone();
         $dayStartMs = self::floorDiv($this->timestampMs, 86400000) * 86400000;
-        return new self($dayStartMs + 86400000 - 1);
+        $result->timestampMs = $dayStartMs + 86400000 - 1;
+        return $result;
     }
 
     /**
