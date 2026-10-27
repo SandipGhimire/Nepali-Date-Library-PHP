@@ -9,6 +9,8 @@ use DateTimeInterface;
 use InvalidArgumentException;
 use NepaliDateLibrary\Helper\Constants;
 use NepaliDateLibrary\Helper\DateFormatter;
+use NepaliDateLibrary\Helper\NepaliConstants;
+use NepaliDateLibrary\Helper\Utils;
 
 /**
  * Represents a date in the Nepali (Bikram Sambat) calendar.
@@ -22,7 +24,7 @@ use NepaliDateLibrary\Helper\DateFormatter;
  * an explicit fixed offset so results only ever depend on the instant being
  * represented, never on the host machine's own timezone configuration.
  */
-final class NepaliDate
+class NepaliDate
 {
     /** @var int */
     private $timestampMs;
@@ -35,6 +37,30 @@ final class NepaliDate
 
     /** @var int */
     private $day;
+
+    /** @var NepaliConstants|null */
+    private $rawConstants = null;
+
+    /** @var NepaliConstants|null */
+    private $cachedProcessedConstants = null;
+
+    protected function _getConstants(): NepaliConstants
+    {
+        return Constants::getBundled();
+    }
+
+    private function getConstants(): NepaliConstants
+    {
+        $currentRaw = $this->_getConstants();
+        if ($currentRaw === Constants::getBundled()) {
+            return $currentRaw;
+        }
+        if ($this->rawConstants !== $currentRaw || $this->cachedProcessedConstants === null) {
+            $this->rawConstants = $currentRaw;
+            $this->cachedProcessedConstants = Utils::processConstants($currentRaw);
+        }
+        return $this->cachedProcessedConstants;
+    }
 
     /**
      * Creates a NepaliDate instance.

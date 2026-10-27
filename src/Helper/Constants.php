@@ -236,6 +236,33 @@ final class Constants
 
         self::$initialized = true;
     }
+
+    /** @var NepaliConstants|null */
+    private static $bundledInstance = null;
+
+    public static function getBundled(): NepaliConstants
+    {
+        self::init();
+
+        if (self::$bundledInstance === null) {
+            self::$bundledInstance = new NepaliConstants(
+                self::$NEPALI_DATE_MAP,
+                self::$EPOCH,
+                self::$NEPAL_UTC_OFFSET_MS,
+                self::$WEEK_EN,
+                self::$WEEK_SHORT_EN,
+                self::$WEEK_NP,
+                self::$WEEK_SHORT_NP,
+                self::$MONTH_EN,
+                self::$MONTH_SHORT_EN,
+                self::$MONTH_NP,
+                self::$MONTH_SHORT_NP,
+                self::$NUMBER_NP
+            );
+        }
+
+        return self::$bundledInstance;
+    }
 }
 
 Constants::init();
