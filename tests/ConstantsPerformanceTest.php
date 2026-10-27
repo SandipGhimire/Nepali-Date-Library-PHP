@@ -14,14 +14,11 @@ class ConstantsPerformanceTest extends TestCase
     public function testDefaultConstantsPerformance(): void
     {
         $date = new NepaliDate();
-        $reflector = new \ReflectionClass($date);
-        $method = $reflector->getMethod('getConstants');
-        $method->setAccessible(true);
 
         $N = 1000000;
         $start = microtime(true);
         for ($i = 0; $i < $N; $i++) {
-            $method->invoke($date);
+            $date->getConstants();
         }
         $elapsed = microtime(true) - $start;
         $microPerOp = ($elapsed * 1000000) / $N;
@@ -53,22 +50,18 @@ class ConstantsPerformanceTest extends TestCase
         $customDate = new class($customConstants) extends NepaliDate {
             private $custom;
             public function __construct(NepaliConstants $custom) {
-                parent::__construct();
                 $this->custom = $custom;
+                parent::__construct(2080, 0, 1);
             }
             protected function _getConstants(): NepaliConstants {
                 return $this->custom;
             }
         };
 
-        $reflector = new \ReflectionClass($customDate);
-        $method = $reflector->getMethod('getConstants');
-        $method->setAccessible(true);
-
         // First process
         $start = microtime(true);
         /** @var NepaliConstants $first */
-        $first = $method->invoke($customDate);
+        $first = $customDate->getConstants();
         $firstRunMicro = (microtime(true) - $start) * 1000000;
 
         $this->assertEquals(364, $first->dateMap[0]['totalDays']);
@@ -79,7 +72,7 @@ class ConstantsPerformanceTest extends TestCase
         $N = 1000000;
         $start = microtime(true);
         for ($i = 0; $i < $N; $i++) {
-            $method->invoke($customDate);
+            $customDate->getConstants();
         }
         $cachedMicro = ((microtime(true) - $start) * 1000000) / $N;
 

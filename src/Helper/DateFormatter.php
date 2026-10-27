@@ -26,12 +26,13 @@ final class DateFormatter
      * Converts a string of ASCII digits into Nepali digits.
      * Example: "123" -> "१२३"
      */
-    private static function npDigit(string $str): string
+    private static function npDigit(string $str, ?array $digits = null): string
     {
+        $chars = $digits ?? Constants::$NUMBER_NP;
         $res = '';
         $length = strlen($str);
         for ($i = 0; $i < $length; $i++) {
-            $res .= Constants::$NUMBER_NP[ord($str[$i]) - 48];
+            $res .= $chars[ord($str[$i]) - 48];
         }
         return $res;
     }
@@ -60,13 +61,14 @@ final class DateFormatter
     {
         return static function (NepaliDate $date) use ($size): string {
             $year = (string) $date->getYear();
+            $digits = $date->getConstants()->numberNp;
             if ($size <= 2) {
-                return self::npDigit(substr($year, 2));
+                return self::npDigit(substr($year, 2), $digits);
             }
             if ($size === 3) {
-                return self::npDigit(substr($year, 1));
+                return self::npDigit(substr($year, 1), $digits);
             }
-            return self::npDigit($year);
+            return self::npDigit($year, $digits);
         };
     }
 
@@ -82,10 +84,11 @@ final class DateFormatter
             if ($size === 2) {
                 return self::pad($date->getMonth() + 1);
             }
+            $c = $date->getConstants();
             if ($size === 3) {
-                return Constants::$MONTH_SHORT_EN[$date->getMonth()];
+                return $c->monthShortEn[$date->getMonth()];
             }
-            return Constants::$MONTH_EN[$date->getMonth()];
+            return $c->monthEn[$date->getMonth()];
         };
     }
 
@@ -95,16 +98,17 @@ final class DateFormatter
     private static function monthNp(int $size): callable
     {
         return static function (NepaliDate $date) use ($size): string {
+            $c = $date->getConstants();
             if ($size === 1) {
-                return self::npDigit((string) ($date->getMonth() + 1));
+                return self::npDigit((string) ($date->getMonth() + 1), $c->numberNp);
             }
             if ($size === 2) {
-                return self::npDigit(self::pad($date->getMonth() + 1));
+                return self::npDigit(self::pad($date->getMonth() + 1), $c->numberNp);
             }
             if ($size === 3) {
-                return Constants::$MONTH_SHORT_NP[$date->getMonth()];
+                return $c->monthShortNp[$date->getMonth()];
             }
-            return Constants::$MONTH_NP[$date->getMonth()];
+            return $c->monthNp[$date->getMonth()];
         };
     }
 
@@ -120,10 +124,11 @@ final class DateFormatter
             if ($size === 2) {
                 return self::pad($date->getDate());
             }
+            $c = $date->getConstants();
             if ($size === 3) {
-                return Constants::$WEEK_SHORT_EN[$date->getDay()];
+                return $c->weekShortEn[$date->getDay()];
             }
-            return Constants::$WEEK_EN[$date->getDay()];
+            return $c->weekEn[$date->getDay()];
         };
     }
 
@@ -133,16 +138,17 @@ final class DateFormatter
     private static function dateNp(int $size): callable
     {
         return static function (NepaliDate $date) use ($size): string {
+            $c = $date->getConstants();
             if ($size === 1) {
-                return self::npDigit((string) $date->getDate());
+                return self::npDigit((string) $date->getDate(), $c->numberNp);
             }
             if ($size === 2) {
-                return self::npDigit(self::pad($date->getDate()));
+                return self::npDigit(self::pad($date->getDate()), $c->numberNp);
             }
             if ($size === 3) {
-                return Constants::$WEEK_SHORT_NP[$date->getDay()];
+                return $c->weekShortNp[$date->getDay()];
             }
-            return Constants::$WEEK_NP[$date->getDay()];
+            return $c->weekNp[$date->getDay()];
         };
     }
 

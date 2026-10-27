@@ -49,7 +49,7 @@ class NepaliDate
         return Constants::getBundled();
     }
 
-    private function getConstants(): NepaliConstants
+    public function getConstants(): NepaliConstants
     {
         $currentRaw = $this->_getConstants();
         if ($currentRaw === Constants::getBundled()) {
@@ -88,7 +88,7 @@ class NepaliDate
                 throw new InvalidArgumentException('Invalid argument syntax');
             }
         } elseif (is_string($yearOrDate)) {
-            [$y, $m, $d] = self::parseDateString($yearOrDate);
+            [$y, $m, $d] = $this->parseDateString($yearOrDate, $this->getConstants()->dateMap);
             $this->set($y, $m, $d);
         } elseif (is_int($yearOrDate) && $month !== null && $day !== null) {
             $this->set($yearOrDate, $month, $day);
@@ -137,7 +137,7 @@ class NepaliDate
      *
      * @return array{0:int,1:int,2:int} [year, month(0-11), day]
      */
-    private static function parseDateString(string $dateString): array
+    private function parseDateString(string $dateString, ?array $dateMap = null): array
     {
         $parts = preg_split('/[-.\/]/', $dateString, 3);
 
@@ -145,7 +145,7 @@ class NepaliDate
         $month = array_key_exists(1, $parts) ? self::parseIntLike($parts[1]) : 1;
         $day = array_key_exists(2, $parts) ? self::parseIntLike($parts[2]) : 1;
 
-        $map = Constants::$NEPALI_DATE_MAP;
+        $map = $dateMap ?? $this->getConstants()->dateMap;
 
         if ($year < $map[0]['year'] || $year >= $map[0]['year'] + count($map)) {
             throw new InvalidArgumentException('Nepal year out of range');
@@ -184,15 +184,23 @@ class NepaliDate
     {
         $this->timestampMs = $timestampMs;
 
-        $map = Constants::$NEPALI_DATE_MAP;
+        $c = $this->getConstants();
+        $map = $c->dateMap;
         $mapCount = count($map);
 
-        $nepalWallClockMs = $timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
-        $daysCount = self::floorDiv($nepalWallClockMs - Constants::$EPOCH, 86400000);
+        $nepalWallClockMs = $timestampMs + $c->utcOffsetMs;
+        $daysCount = self::floorDiv($nepalWallClockMs - $c->epoch, 86400000);
+
+        if ($daysCount < 0 || $daysCount >= $map[$mapCount - 1]['daysTillNow']) {
+            throw new InvalidArgumentException('Date is out of the supported range');
+        }
+
         $idx = self::floorDiv($daysCount, 366);
 
         if ($idx < 0) {
-            throw new InvalidArgumentException('Date is out of the supported range');
+            $idx = 0;
+        } elseif ($idx >= $mapCount) {
+            $idx = $mapCount - 1;
         }
 
         while ($idx < $mapCount && $daysCount >= $map[$idx]['daysTillNow']) {
@@ -227,7 +235,8 @@ class NepaliDate
      */
     public function set(int $year, int $month, int $date): void
     {
-        $map = Constants::$NEPALI_DATE_MAP;
+        $c = $this->getConstants();
+        $map = $c->dateMap;
         $idx = $year + self::floorDiv($month, 12) - $map[0]['year'];
         if ($idx < 0 || $idx >= count($map)) {
             throw new InvalidArgumentException('Nepal year out of range!');
@@ -244,7 +253,7 @@ class NepaliDate
         }
         $d += $date - 1;
 
-        $utcTimestamp = Constants::$EPOCH + $d * 86400000;
+        $utcTimestamp = $c->epoch + $d * 86400000;
         $this->setEnglishDate($utcTimestamp);
     }
 
@@ -261,7 +270,7 @@ class NepaliDate
      */
     public function clone(): self
     {
-        return new self($this);
+        return new static($this);
     }
 
     /**
@@ -290,7 +299,7 @@ class NepaliDate
      */
     public function parse(string $dateString): void
     {
-        [$y, $m, $d] = self::parseDateString($dateString);
+        [$y, $m, $d] = $this->parseDateString($dateString, $this->getConstants()->dateMap);
         $this->set($y, $m, $d);
     }
 
@@ -308,7 +317,7 @@ class NepaliDate
     /** Day of week (0-6, 0 = Sunday), computed in Nepal local time. */
     public function getDay(): int
     {
-        return (int) gmdate('w', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
+        return (int) gmdate('w', self::floorDiv($this->timestampMs + $this->getConstants()->utcOffsetMs, 1000));
     }
 
     /** Nepali day of month. */
@@ -320,19 +329,19 @@ class NepaliDate
     /** Hour of day (0-23), computed in Nepal local time. */
     public function getHours(): int
     {
-        return (int) gmdate('G', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
+        return (int) gmdate('G', self::floorDiv($this->timestampMs + $this->getConstants()->utcOffsetMs, 1000));
     }
 
     /** Minutes (0-59), computed in Nepal local time. */
     public function getMinutes(): int
     {
-        return (int) gmdate('i', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
+        return (int) gmdate('i', self::floorDiv($this->timestampMs + $this->getConstants()->utcOffsetMs, 1000));
     }
 
     /** Seconds (0-59), computed in Nepal local time. */
     public function getSeconds(): int
     {
-        return (int) gmdate('s', self::floorDiv($this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS, 1000));
+        return (int) gmdate('s', self::floorDiv($this->timestampMs + $this->getConstants()->utcOffsetMs, 1000));
     }
 
     /** Milliseconds (0-999). */
@@ -367,7 +376,7 @@ class NepaliDate
      */
     public function addDays(int $days): self
     {
-        return new self($this->timestampMs + $days * 86400000);
+        return new static($this->timestampMs + $days * 86400000);
     }
 
     /**
@@ -385,7 +394,7 @@ class NepaliDate
             $newMonth += 12;
         }
 
-        $map = Constants::$NEPALI_DATE_MAP;
+        $map = $this->getConstants()->dateMap;
         $yearIndex = $newYear - $map[0]['year'];
         if ($yearIndex < 0 || $yearIndex >= count($map)) {
             throw new InvalidArgumentException('Resulting date is out of supported range');
@@ -394,7 +403,7 @@ class NepaliDate
         $daysInNewMonth = $map[$yearIndex]['days'][$newMonth];
         $newDay = min($this->day, $daysInNewMonth);
 
-        return new self($newYear, $newMonth, $newDay);
+        return new static($newYear, $newMonth, $newDay);
     }
 
     /**
@@ -404,7 +413,7 @@ class NepaliDate
     {
         $newYear = $this->year + $years;
 
-        $map = Constants::$NEPALI_DATE_MAP;
+        $map = $this->getConstants()->dateMap;
         if ($newYear < $map[0]['year'] || $newYear >= $map[0]['year'] + count($map)) {
             throw new InvalidArgumentException('Resulting date is out of supported range');
         }
@@ -413,7 +422,7 @@ class NepaliDate
         $daysInMonth = $map[$yearIndex]['days'][$this->month];
         $newDay = min($this->day, $daysInMonth);
 
-        return new self($newYear, $this->month, $newDay);
+        return new static($newYear, $this->month, $newDay);
     }
 
     /**
@@ -444,9 +453,14 @@ class NepaliDate
         if ($month !== null && ($month < 0 || $month > 11)) {
             throw new InvalidArgumentException('Invalid month index, must be between 0-11');
         }
-        $map = Constants::$NEPALI_DATE_MAP;
-        $yearIndex = ($year ?? $this->year) - $map[0]['year'];
-        return $map[$yearIndex]['days'][$month ?? $this->month];
+        $map = $this->getConstants()->dateMap;
+        $targetYear = $year ?? $this->year;
+        $targetMonth = $month ?? $this->month;
+        $yearIndex = $targetYear - $map[0]['year'];
+        if ($yearIndex < 0 || $yearIndex >= count($map)) {
+            throw new InvalidArgumentException('Year is out of supported range');
+        }
+        return $map[$yearIndex]['days'][$targetMonth];
     }
 
     /**
@@ -454,7 +468,7 @@ class NepaliDate
      */
     public function isLeapYear(): bool
     {
-        $map = Constants::$NEPALI_DATE_MAP;
+        $map = $this->getConstants()->dateMap;
         $yearIndex = $this->year - $map[0]['year'];
         return $map[$yearIndex]['totalDays'] >= 366;
     }
@@ -464,7 +478,7 @@ class NepaliDate
      */
     public function getWeeksInMonth(): int
     {
-        $firstDay = new self($this->year, $this->month, 1);
+        $firstDay = new static($this->year, $this->month, 1);
         $firstDayOfWeek = $firstDay->getDay();
         $totalDays = $this->daysInMonth();
         return (int) ceil(($firstDayOfWeek + $totalDays) / 7);
@@ -500,9 +514,10 @@ class NepaliDate
     public function startOfDay(): self
     {
         $result = $this->clone();
-        $nepalMs = $this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
+        $offset = $this->getConstants()->utcOffsetMs;
+        $nepalMs = $this->timestampMs + $offset;
         $nepalDayStartMs = self::floorDiv($nepalMs, 86400000) * 86400000;
-        $result->timestampMs = $nepalDayStartMs - Constants::$NEPAL_UTC_OFFSET_MS;
+        $result->timestampMs = $nepalDayStartMs - $offset;
         return $result;
     }
 
@@ -512,9 +527,10 @@ class NepaliDate
     public function endOfDay(): self
     {
         $result = $this->clone();
-        $nepalMs = $this->timestampMs + Constants::$NEPAL_UTC_OFFSET_MS;
+        $offset = $this->getConstants()->utcOffsetMs;
+        $nepalMs = $this->timestampMs + $offset;
         $nepalDayStartMs = self::floorDiv($nepalMs, 86400000) * 86400000;
-        $result->timestampMs = $nepalDayStartMs + 86400000 - 1 - Constants::$NEPAL_UTC_OFFSET_MS;
+        $result->timestampMs = $nepalDayStartMs + 86400000 - 1 - $offset;
         return $result;
     }
 
@@ -555,7 +571,7 @@ class NepaliDate
      */
     public function startOfMonth(): self
     {
-        return new self($this->year, $this->month, 1);
+        return new static($this->year, $this->month, 1);
     }
 
     /**
@@ -564,7 +580,7 @@ class NepaliDate
     public function endOfMonth(): self
     {
         $daysInMonth = $this->daysInMonth();
-        return (new self($this->year, $this->month, $daysInMonth))->endOfDay();
+        return (new static($this->year, $this->month, $daysInMonth))->endOfDay();
     }
 
     /**
@@ -572,7 +588,7 @@ class NepaliDate
      */
     public function startOfYear(): self
     {
-        return new self($this->year, 0, 1);
+        return new static($this->year, 0, 1);
     }
 
     /**
@@ -580,10 +596,10 @@ class NepaliDate
      */
     public function endOfYear(): self
     {
-        $map = Constants::$NEPALI_DATE_MAP;
+        $map = $this->getConstants()->dateMap;
         $yearIndex = $this->year - $map[0]['year'];
         $daysInChaitra = $map[$yearIndex]['days'][11];
-        return (new self($this->year, 11, $daysInChaitra))->endOfDay();
+        return (new static($this->year, 11, $daysInChaitra))->endOfDay();
     }
 
     /**
@@ -621,20 +637,24 @@ class NepaliDate
      */
     public static function isValid(int $year, int $month, int $day): bool
     {
-        $map = Constants::$NEPALI_DATE_MAP;
+        try {
+            $map = Constants::$NEPALI_DATE_MAP;
 
-        if ($year < $map[0]['year'] || $year >= $map[0]['year'] + count($map)) {
+            if ($year < $map[0]['year'] || $year >= $map[0]['year'] + count($map)) {
+                return false;
+            }
+
+            if ($month < 0 || $month > 11) {
+                return false;
+            }
+
+            $yearIndex = $year - $map[0]['year'];
+            $daysInMonth = $map[$yearIndex]['days'][$month];
+
+            return $day >= 1 && $day <= $daysInMonth;
+        } catch (\Throwable $e) {
             return false;
         }
-
-        if ($month < 0 || $month > 11) {
-            return false;
-        }
-
-        $yearIndex = $year - $map[0]['year'];
-        $daysInMonth = $map[$yearIndex]['days'][$month];
-
-        return $day >= 1 && $day <= $daysInMonth;
     }
 
     /**
@@ -645,7 +665,23 @@ class NepaliDate
      */
     public function isValidInstance(): bool
     {
-        return self::isValid($this->year, $this->month, $this->day);
+        try {
+            $map = $this->getConstants()->dateMap;
+            if ($this->year < $map[0]['year'] || $this->year >= $map[0]['year'] + count($map)) {
+                return false;
+            }
+
+            if ($this->month < 0 || $this->month > 11) {
+                return false;
+            }
+
+            $yearIndex = $this->year - $map[0]['year'];
+            $daysInMonth = $map[$yearIndex]['days'][$this->month];
+
+            return $this->day >= 1 && $this->day <= $daysInMonth;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -662,11 +698,18 @@ class NepaliDate
      */
     public static function getCalendarDays(int $year, int $month): array
     {
-        if (!self::isValid($year, $month, 1)) {
+        if ($month < 0 || $month > 11) {
             throw new InvalidArgumentException('Invalid year or month');
         }
 
-        $map = Constants::$NEPALI_DATE_MAP;
+        try {
+            $firstDay = new static($year, $month, 1);
+        } catch (\Throwable $e) {
+            throw new InvalidArgumentException('Invalid year or month');
+        }
+
+        $c = $firstDay->getConstants();
+        $map = $c->dateMap;
         $mapStartYear = $map[0]['year'];
         $mapCount = count($map);
 
@@ -676,7 +719,6 @@ class NepaliDate
 
         $yearIndex = $year - $mapStartYear;
 
-        $firstDay = new self($year, $month, 1);
         $firstDayOfWeek = $firstDay->getDay();
 
         $daysInMonth = $map[$yearIndex]['days'][$month];
@@ -793,11 +835,11 @@ class NepaliDate
             throw new InvalidArgumentException('Quarter must be an integer between 1 and 4');
         }
 
-        $nepaliYear = $year ?? (new self())->getYear();
+        $nepaliYear = $year ?? (new static())->getYear();
         $startMonth = ($quarter - 1) * 3;
 
-        $start = new self($nepaliYear, $startMonth, 1);
-        $end = (new self($nepaliYear, $startMonth + 2, 1))->endOfMonth();
+        $start = new static($nepaliYear, $startMonth, 1);
+        $end = (new static($nepaliYear, $startMonth + 2, 1))->endOfMonth();
 
         return ['start' => $start, 'end' => $end];
     }
@@ -817,13 +859,13 @@ class NepaliDate
      */
     public static function getQuarters(?int $year = null): array
     {
-        $nepaliYear = $year ?? (new self())->getYear();
+        $nepaliYear = $year ?? (new static())->getYear();
 
         return [
-            'Q1' => self::getQuarter(1, $nepaliYear),
-            'Q2' => self::getQuarter(2, $nepaliYear),
-            'Q3' => self::getQuarter(3, $nepaliYear),
-            'Q4' => self::getQuarter(4, $nepaliYear),
+            'Q1' => static::getQuarter(1, $nepaliYear),
+            'Q2' => static::getQuarter(2, $nepaliYear),
+            'Q3' => static::getQuarter(3, $nepaliYear),
+            'Q4' => static::getQuarter(4, $nepaliYear),
         ];
     }
 
@@ -833,7 +875,7 @@ class NepaliDate
      */
     public static function getCurrentFiscalYear(): int
     {
-        $today = new self();
+        $today = new static();
         $year = $today->getYear();
         $month = $today->getMonth();
 
@@ -851,7 +893,7 @@ class NepaliDate
             throw new InvalidArgumentException('Quarter must be an integer between 1 and 4');
         }
 
-        $currentFiscalYear = $fiscalYear ?? self::getCurrentFiscalYear();
+        $currentFiscalYear = $fiscalYear ?? static::getCurrentFiscalYear();
 
         $startYear = $currentFiscalYear;
         $startMonth = ($quarter - 1) * 3 + 3;
@@ -874,8 +916,8 @@ class NepaliDate
             $endMonth -= 12;
         }
 
-        $start = new self($startYear, $startMonth, 1);
-        $end = (new self($endYear, $endMonth, 1))->endOfMonth();
+        $start = new static($startYear, $startMonth, 1);
+        $end = (new static($endYear, $endMonth, 1))->endOfMonth();
 
         return ['start' => $start, 'end' => $end];
     }
@@ -908,9 +950,9 @@ class NepaliDate
     public function getCurrentFiscalYearQuarterDates(): array
     {
         $currentQuarter = $this->getCurrentFiscalYearQuarter();
-        $currentFiscalYear = self::getCurrentFiscalYear();
+        $currentFiscalYear = static::getCurrentFiscalYear();
 
-        return self::getFiscalYearQuarter($currentQuarter, $currentFiscalYear);
+        return static::getFiscalYearQuarter($currentQuarter, $currentFiscalYear);
     }
 
     /**
@@ -920,13 +962,13 @@ class NepaliDate
      */
     public static function getFiscalYearQuarters(?int $fiscalYear = null): array
     {
-        $year = $fiscalYear ?? self::getCurrentFiscalYear();
+        $year = $fiscalYear ?? static::getCurrentFiscalYear();
 
         return [
-            'Q1' => self::getFiscalYearQuarter(1, $year),
-            'Q2' => self::getFiscalYearQuarter(2, $year),
-            'Q3' => self::getFiscalYearQuarter(3, $year),
-            'Q4' => self::getFiscalYearQuarter(4, $year),
+            'Q1' => static::getFiscalYearQuarter(1, $year),
+            'Q2' => static::getFiscalYearQuarter(2, $year),
+            'Q3' => static::getFiscalYearQuarter(3, $year),
+            'Q4' => static::getFiscalYearQuarter(4, $year),
         ];
     }
 }
