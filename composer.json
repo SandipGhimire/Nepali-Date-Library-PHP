@@ -59,7 +59,20 @@
     },
     "scripts": {
         "test": "phpunit",
-        "test:coverage": "phpunit --coverage-text --coverage-filter=src"
+        "test:custom": "phpunit tests/CustomConstantsTest.php",
+        "test:coverage": "phpunit --coverage-text --coverage-filter=src",
+        "check:composer": "@composer validate --strict --no-check-publish",
+        "check": [
+            "@check:composer",
+            "@test"
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run the whole PHPUnit suite (extra args: composer test -- --filter name)",
+        "test:custom": "Run only the custom/pluggable constants tests",
+        "test:coverage": "Run the suite with a text coverage report (needs Xdebug or PCOV)",
+        "check:composer": "Validate composer.json strictly",
+        "check": "Pre-release check: validate composer.json, then run all tests"
     },
     "config": {
         "sort-packages": true
