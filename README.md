@@ -26,6 +26,12 @@ All guides, complete API references, Devanagari format tokens, fiscal year helpe
 composer require sghimire/nepali-date-library
 ```
 
+> **Beta:** the pluggable-calendar-data release is tagged `v1.1.0-beta.1`.
+>
+> ```bash
+> composer require sghimire/nepali-date-library:^1.1@beta
+> ```
+
 ---
 
 ## 🚀 Quick Example
