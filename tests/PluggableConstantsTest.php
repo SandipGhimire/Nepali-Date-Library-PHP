@@ -15,7 +15,7 @@ class ExtendedNepaliDate extends NepaliDate
     /** @var NepaliConstants|null */
     public static $customCalendar = null;
 
-    protected function _getConstants(): NepaliConstants
+    protected static function constants(): NepaliConstants
     {
         return self::$customCalendar ?? Constants::getBundled();
     }

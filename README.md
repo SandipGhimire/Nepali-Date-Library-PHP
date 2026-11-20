@@ -41,6 +41,47 @@ echo $today->format("YYYY-MM-DD"); // "2081-07-01"
 
 ---
 
+## 🛠️ Custom Calendar Data
+
+The calendar tables are replaceable, so you can add new years, fix a month length or change labels without waiting for a release. Extend `NepaliDate`, override the static `constants()` hook and return an object built with `NepaliConstants::define()`:
+
+```php
+use NepaliDateLibrary\Helper\Constants;
+use NepaliDateLibrary\Helper\NepaliConstants;
+use NepaliDateLibrary\NepaliDate;
+
+use function NepaliDateLibrary\ADtoBS;
+
+class MyNepaliDate extends NepaliDate
+{
+    private static $calendar = null;
+
+    protected static function constants(): NepaliConstants
+    {
+        if (self::$calendar === null) {
+            self::$calendar = NepaliConstants::define([
+                // anything you leave out falls back to the bundled data
+                'dateMap' => array_merge(Constants::$NEPALI_DATE_MAP, [
+                    ['year' => 2101, 'days' => [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 31]],
+                ]),
+            ]);
+        }
+
+        return self::$calendar; // return the same object every time
+    }
+}
+
+(new MyNepaliDate(2101, 0, 1))->format('YYYY-MM-DD'); // "2101-01-01"
+MyNepaliDate::isValid(2101, 0, 1); // true (static helpers follow the subclass too)
+ADtoBS('2044-04-13', MyNepaliDate::class); // converters accept your class
+```
+
+Good to know:
+
+- Accepted keys: `dateMap`, `epoch`, `utcOffsetMs`, `weekEn`, `weekShortEn`, `weekNp`, `weekShortNp`, `monthEn`, `monthShortEn`, `monthNp`, `monthShortNp`, `numberNp`. Unknown keys throw.
+- Constants are validated once (consecutive years, 12 months of 1-32 days, name tables of the right size, ...) and snapshotted on first use. Later edits to your object are ignored; to change the calendar, return a different object.
+- Time-dependent helpers such as `getCurrentFiscalYear()` use today's date, so they throw if today is outside your calendar. Pass an explicit year in that case.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please read our [**Contributing Guide**](./CONTRIBUTING.md) or visit our [**Online Contribution Guide**](https://nepali-pkg.date/docs/contribution).

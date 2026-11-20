@@ -259,6 +259,8 @@ final class Constants
                 self::$MONTH_SHORT_NP,
                 self::$NUMBER_NP
             );
+            // The bundled map already carries totalDays / daysTillNow (see init()).
+            self::$bundledInstance->markProcessed();
         }
 
         return self::$bundledInstance;

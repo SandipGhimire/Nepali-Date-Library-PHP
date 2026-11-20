@@ -47,16 +47,16 @@ class ConstantsPerformanceTest extends TestCase
             Constants::$NUMBER_NP
         );
 
-        $customDate = new class($customConstants) extends NepaliDate {
-            private $custom;
-            public function __construct(NepaliConstants $custom) {
-                $this->custom = $custom;
-                parent::__construct(2080, 0, 1);
-            }
-            protected function _getConstants(): NepaliConstants {
-                return $this->custom;
+        $customDate = new class(2080, 0, 1) extends NepaliDate {
+            /** @var NepaliConstants|null */
+            public static $custom = null;
+            protected static function constants(): NepaliConstants {
+                return self::$custom ?? parent::constants();
             }
         };
+        $class = get_class($customDate);
+        $class::$custom = $customConstants;
+        $customDate = new $class(2080, 0, 1);
 
         // First process
         $start = microtime(true);

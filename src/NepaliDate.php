@@ -38,28 +38,38 @@ class NepaliDate
     /** @var int */
     private $day;
 
-    /** @var NepaliConstants|null */
-    private $rawConstants = null;
-
-    /** @var NepaliConstants|null */
-    private $cachedProcessedConstants = null;
-
-    protected function _getConstants(): NepaliConstants
+    /**
+     * Extension point: override in a subclass to plug in your own calendar data.
+     *
+     * Return the same NepaliConstants object every time (a static property or a constant, not a
+     * fresh object per call), ideally one built with NepaliConstants::define(). The data is
+     * validated and snapshotted the first time it is used; to change the calendar later, return a
+     * different object.
+     *
+     * Example:
+     *
+     *     class MyNepaliDate extends NepaliDate
+     *     {
+     *         protected static function constants(): NepaliConstants
+     *         {
+     *             return self::$calendar ??= NepaliConstants::define([...]);
+     *         }
+     *     }
+     */
+    protected static function constants(): NepaliConstants
     {
         return Constants::getBundled();
     }
 
-    public function getConstants(): NepaliConstants
+    /**
+     * Returns the validated calendar data this class works with. Cheap to call: the processed
+     * snapshot is cached on the constants object. Callable on the class or on an instance.
+     *
+     * @throws InvalidArgumentException if the subclass supplies invalid constants
+     */
+    public static function getConstants(): NepaliConstants
     {
-        $currentRaw = $this->_getConstants();
-        if ($currentRaw === Constants::getBundled()) {
-            return $currentRaw;
-        }
-        if ($this->rawConstants !== $currentRaw || $this->cachedProcessedConstants === null) {
-            $this->rawConstants = $currentRaw;
-            $this->cachedProcessedConstants = Utils::processConstants($currentRaw);
-        }
-        return $this->cachedProcessedConstants;
+        return static::constants()->process();
     }
 
     /**
@@ -78,10 +88,15 @@ class NepaliDate
             $this->setEnglishDate(self::nowMs());
         } elseif (is_object($yearOrDate)) {
             if ($yearOrDate instanceof self) {
-                $this->timestampMs = $yearOrDate->timestampMs;
-                $this->year = $yearOrDate->year;
-                $this->month = $yearOrDate->month;
-                $this->day = $yearOrDate->day;
+                if ($yearOrDate->getConstants() === $this->getConstants()) {
+                    $this->timestampMs = $yearOrDate->timestampMs;
+                    $this->year = $yearOrDate->year;
+                    $this->month = $yearOrDate->month;
+                    $this->day = $yearOrDate->day;
+                } else {
+                    // Different calendar: recompute from the instant instead of trusting foreign fields.
+                    $this->setEnglishDate($yearOrDate->timestampMs);
+                }
             } elseif ($yearOrDate instanceof DateTimeInterface) {
                 $this->setEnglishDate(self::msFromDateTime($yearOrDate));
             } else {
@@ -195,34 +210,18 @@ class NepaliDate
             throw new InvalidArgumentException('Date is out of the supported range');
         }
 
-        $idx = self::floorDiv($daysCount, 366);
-
-        if ($idx < 0) {
-            $idx = 0;
-        } elseif ($idx >= $mapCount) {
-            $idx = $mapCount - 1;
-        }
-
-        while ($idx < $mapCount && $daysCount >= $map[$idx]['daysTillNow']) {
-            $idx++;
-        }
-
-        if ($idx >= $mapCount) {
-            throw new InvalidArgumentException('Date is out of the supported range');
-        }
-
-        $prevTillNow = $idx - 1 >= 0 ? $map[$idx - 1]['daysTillNow'] : 0;
-        $daysCount -= $prevTillNow;
-
+        $idx = Utils::findYearIndex($map, $daysCount);
         $tmp = $map[$idx];
-        $this->year = $tmp['year'];
-        $this->month = 0;
+        $daysCount -= $tmp['daysTillNow'] - $tmp['totalDays'];
 
-        while ($daysCount >= $tmp['days'][$this->month]) {
-            $daysCount -= $tmp['days'][$this->month];
-            $this->month++;
+        $month = 0;
+        while ($daysCount >= $tmp['days'][$month]) {
+            $daysCount -= $tmp['days'][$month];
+            $month++;
         }
 
+        $this->year = $tmp['year'];
+        $this->month = $month;
         $this->day = $daysCount + 1;
     }
 
@@ -430,7 +429,7 @@ class NepaliDate
      */
     public static function minimum(): DateTimeImmutable
     {
-        return self::dateTimeFromMs(Constants::$EPOCH);
+        return self::dateTimeFromMs(static::getConstants()->epoch);
     }
 
     /**
@@ -438,11 +437,12 @@ class NepaliDate
      */
     public static function maximum(): DateTimeImmutable
     {
-        $map = Constants::$NEPALI_DATE_MAP;
+        $c = static::getConstants();
+        $map = $c->dateMap;
         $last = $map[count($map) - 1];
         // daysTillNow is a count (1-indexed); the last valid day sits at
         // offset (daysTillNow - 1).
-        return self::dateTimeFromMs(Constants::$EPOCH + ($last['daysTillNow'] - 1) * 86400000);
+        return self::dateTimeFromMs($c->epoch + ($last['daysTillNow'] - 1) * 86400000);
     }
 
     /**
@@ -611,10 +611,11 @@ class NepaliDate
             throw new InvalidArgumentException('Invalid month index, must be between 0-11');
         }
 
+        $c = static::getConstants();
         if ($nepali) {
-            return $short ? Constants::$MONTH_SHORT_NP[$month] : Constants::$MONTH_NP[$month];
+            return $short ? $c->monthShortNp[$month] : $c->monthNp[$month];
         }
-        return $short ? Constants::$MONTH_SHORT_EN[$month] : Constants::$MONTH_EN[$month];
+        return $short ? $c->monthShortEn[$month] : $c->monthEn[$month];
     }
 
     /**
@@ -626,10 +627,11 @@ class NepaliDate
             throw new InvalidArgumentException('Invalid day index, must be between 0-6');
         }
 
+        $c = static::getConstants();
         if ($nepali) {
-            return $short ? Constants::$WEEK_SHORT_NP[$day] : Constants::$WEEK_NP[$day];
+            return $short ? $c->weekShortNp[$day] : $c->weekNp[$day];
         }
-        return $short ? Constants::$WEEK_SHORT_EN[$day] : Constants::$WEEK_EN[$day];
+        return $short ? $c->weekShortEn[$day] : $c->weekEn[$day];
     }
 
     /**
@@ -637,9 +639,10 @@ class NepaliDate
      */
     public static function isValid(int $year, int $month, int $day): bool
     {
-        try {
-            $map = Constants::$NEPALI_DATE_MAP;
+        // Resolved outside the try so a broken calendar is reported, not mistaken for "invalid date".
+        $map = static::getConstants()->dateMap;
 
+        try {
             if ($year < $map[0]['year'] || $year >= $map[0]['year'] + count($map)) {
                 return false;
             }
@@ -665,8 +668,9 @@ class NepaliDate
      */
     public function isValidInstance(): bool
     {
+        $map = $this->getConstants()->dateMap;
+
         try {
-            $map = $this->getConstants()->dateMap;
             if ($this->year < $map[0]['year'] || $this->year >= $map[0]['year'] + count($map)) {
                 return false;
             }
@@ -701,6 +705,8 @@ class NepaliDate
         if ($month < 0 || $month > 11) {
             throw new InvalidArgumentException('Invalid year or month');
         }
+
+        static::getConstants(); // surface an invalid calendar instead of reporting a bad month
 
         try {
             $firstDay = new static($year, $month, 1);
